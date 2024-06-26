@@ -1,0 +1,3 @@
+[submodule "include/can-header-map"]
+	path = include/can-header-map
+	url = https://github.com/FSLART/Can-Header-Map
