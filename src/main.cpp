@@ -102,7 +102,7 @@ void setup()
         Serial.println("Failed to create queue");
         while (1);
     }
-
+    colorWipe(strip.Color(0, 0, 0), 0);
     xTaskCreatePinnedToCore(
         Task1code,
         "Task1",
@@ -126,7 +126,7 @@ void setup()
 void loop()
 {
     leds();
-   
+    
    
     CAN_ID = CAN1.RXpacketBegin();
     int id = CAN_ID;
@@ -183,9 +183,10 @@ void Task1code(void *pvParameters)
     if (task == true)
     {
         int estado = 0;
-        int receivedValue;
+        int receivedValue = 0;
         while (1)
         {
+            colorWipe(strip.Color(0, 0, 0), 0);
             //Serial.println("TASK");
 
             // Receiving data from the queue
@@ -235,9 +236,10 @@ void Task1code(void *pvParameters)
                     colorWipe(strip.Color(0, 0, 255), 0);
                     send = true;
                     break;
+                default:
+                    colorWipe(strip.Color(0, 0, 0), 0);
+                    break;
                 }
-            
-            
         }
     }
 }
