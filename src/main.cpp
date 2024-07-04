@@ -35,13 +35,11 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 volatile int flag_heart = 0;
 TWAI_Interface CAN1(1000, 21, 22);
 
-void IRAM_ATTR onTimer()
-{
-    flag_heart = 1;
-}
+
 
 void colorWipe(uint32_t color, int wait);
 void Task1code(void *pvParameters);
+void leds();
 #define PIN 14
 #define NUM_LEDS 15
 volatile boolean send = true;
@@ -52,8 +50,9 @@ TaskHandle_t Task1;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 volatile unsigned long tim = 0;
+volatile unsigned long protect = 0;
 int flag = 0;
-
+volatile int flag_mission_select = 0;
 
 volatile uint32_t CAN_ID = 0;
 
@@ -63,7 +62,15 @@ volatile int flag_core = 0;
 
 void IRAM_ATTR mission_select()
 {
-    if (digitalRead(BTN) == 0)
+    if(millis()>= protect+600)
+    {
+        contador++;
+        protect = millis();
+    }
+    
+    
+    //detachInterrupt(BTN);
+    /*if (digitalRead(BTN) == 0)
     {
         delay(50);
         while (digitalRead(BTN) == 0)
@@ -84,6 +91,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Manual driving");
+            }
             break;
         case 2:
             digitalWrite(Manual_driving, LOW);
@@ -93,6 +104,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Accelaration");
+            }
             break;
         case 3:
             digitalWrite(Manual_driving, LOW);
@@ -102,6 +117,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Skidpad");
+            }
             break;
         case 4:
             digitalWrite(Manual_driving, LOW);
@@ -111,6 +130,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Autocross");
+            }
             break;
         case 5:
             digitalWrite(Manual_driving, LOW);
@@ -120,6 +143,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, HIGH);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Trackdrive");
+            }
             break;
         case 6:
             digitalWrite(Manual_driving, LOW);
@@ -129,6 +156,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, HIGH);
             digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("EBS Test");
+            }
             break;
         case 7:
             digitalWrite(Manual_driving, LOW);
@@ -138,6 +169,10 @@ void IRAM_ATTR mission_select()
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, HIGH);
+            if(bl.available())
+            {
+                bl.println("Inspection");
+            }
             break;
         default:
             contador = 1;
@@ -146,8 +181,16 @@ void IRAM_ATTR mission_select()
         CAN1.TXpacketBegin(0x501, 1);
         CAN1.TXpacketLoad(contador);
         CAN1.TXpackettransmit();
-    }
+    }*/
 }
+
+
+void IRAM_ATTR onTimer()
+{
+    flag_heart = 1;   
+}
+
+
 void setup()
 {
 
@@ -157,9 +200,9 @@ void setup()
     Serial.println("Here");
     strip.show();
     strip.clear();
-    attachInterrupt(BTN, mission_select, FALLING);
 
-    pinMode(BTN, INPUT_PULLUP);
+    pinMode(BTN, INPUT);
+    attachInterrupt(BTN, mission_select, FALLING);
     pinMode(Accelaration, OUTPUT);
     pinMode(Skidpad, OUTPUT);
     pinMode(Autocross, OUTPUT);
@@ -189,13 +232,17 @@ void setup()
     timerAttachInterrupt(timer, &onTimer, true);
     timerAlarmWrite(timer, 1000000, true);
     timerAlarmEnable(timer);
+
+    //esp_task_wdt_init(1,false);
+   
  
 }
 
 void loop()
 {
-    
-
+    leds();
+   
+   
     CAN_ID = CAN1.RXpacketBegin();
     int id = CAN_ID;
     
@@ -222,18 +269,14 @@ void loop()
         {
             Serial.println("Failed to send to the queue");
         }
-    }
+    }  
 
     if (flag_heart == 1)
     {
         CAN1.TXpacketBegin(0x490, 0);
-        CAN1.TXpacketLoad(1);
+        CAN1.TXpacketLoad(contador);
         CAN1.TXpackettransmit();
-        flag_heart = 0;
-        if (bl.available())
-        {
-            bl.println("i'm still running");
-        }
+        flag_heart = 0; 
     }
     id = 0x503;
 }
@@ -312,4 +355,112 @@ void Task1code(void *pvParameters)
             
         }
     }
+}
+
+
+
+void leds()
+{
+    switch (contador)
+        {
+        case 1:
+            digitalWrite(Manual_driving, HIGH);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Manual driving");
+            }
+            break;
+        case 2:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, HIGH);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Accelaration");
+            }
+            break;
+        case 3:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, HIGH);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Skidpad");
+            }
+            break;
+        case 4:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, HIGH);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Autocross");
+            }
+            break;
+        case 5:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, HIGH);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("Trackdrive");
+            }
+            break;
+        case 6:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, HIGH);
+            digitalWrite(Inspection, LOW);
+            if(bl.available())
+            {
+                bl.println("EBS Test");
+            }
+            break;
+        case 7:
+            digitalWrite(Manual_driving, LOW);
+            digitalWrite(Accelaration, LOW);
+            digitalWrite(Skidpad, LOW);
+            digitalWrite(Autocross, LOW);
+            digitalWrite(Trackdrive, LOW);
+            digitalWrite(EBS_test, LOW);
+            digitalWrite(Inspection, HIGH);
+            if(bl.available())
+            {
+                bl.println("Inspection");
+            }
+            break;
+        default:
+            contador = 1;
+            break;
+        }
+        Serial.println(contador);
+        CAN1.TXpacketBegin(0x501, 1);
+        CAN1.TXpacketLoad(contador);
+        CAN1.TXpackettransmit();
+        flag_mission_select = 0;
 }
