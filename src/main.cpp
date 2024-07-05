@@ -164,7 +164,7 @@ void loop()
         flag_heart = 0; 
     }
     id = 0x503;
-    if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS)
+    if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS) // test purpose only
         {
             Serial.println("Failed to send to the queue");
         }
