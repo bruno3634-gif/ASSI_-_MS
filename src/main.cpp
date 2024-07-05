@@ -164,10 +164,10 @@ void loop()
         flag_heart = 0; 
     }
     id = 0x503;
-    if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS) // test purpose only
+    /*if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS) // test purpose only
         {
             Serial.println("Failed to send to the queue");
-        }
+        }*/
 }
 
 void colorWipe(uint32_t color, int wait)
