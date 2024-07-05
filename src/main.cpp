@@ -150,7 +150,7 @@ void loop()
         }
 
         // Send estado to the queue
-        if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS)
+        if (xQueueSend(xQueue, &flag, portMAX_DELAY) != pdPASS)
         {
             Serial.println("Failed to send to the queue");
         }
