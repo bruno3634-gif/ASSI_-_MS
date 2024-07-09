@@ -16,12 +16,12 @@ QueueHandle_t xQueue;
 
 #define Accelaration 4
 #define Skidpad 27
-#define Autocross 16
+//#define Autocross 16
 #define Trackdrive 17
 #define EBS_test 15
 #define Inspection 33
 #define Manual_driving 23
-volatile int contador = 1;
+int contador = 1;
 
 BluetoothSerial bl;
 
@@ -40,8 +40,8 @@ TWAI_Interface CAN1(1000, 21, 22);
 void colorWipe(uint32_t color, int wait);
 void Task1code(void *pvParameters);
 void leds();
-#define PIN 14
-#define NUM_LEDS 15
+#define PIN 16
+#define NUM_LEDS 16
 volatile boolean send = true;
 
 volatile boolean task = true;
@@ -67,121 +67,6 @@ void IRAM_ATTR mission_select()
         contador++;
         protect = millis();
     }
-    
-    
-    //detachInterrupt(BTN);
-    /*if (digitalRead(BTN) == 0)
-    {
-        delay(50);
-        while (digitalRead(BTN) == 0)
-        {
-            delay(50);
-            Serial.print("!");
-        }
-        contador++;
-        Serial.println(contador);
-
-        switch (contador)
-        {
-        case 1:
-            digitalWrite(Manual_driving, HIGH);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Manual driving");
-            }
-            break;
-        case 2:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, HIGH);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Accelaration");
-            }
-            break;
-        case 3:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, HIGH);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Skidpad");
-            }
-            break;
-        case 4:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, HIGH);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Autocross");
-            }
-            break;
-        case 5:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, HIGH);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Trackdrive");
-            }
-            break;
-        case 6:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, HIGH);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("EBS Test");
-            }
-            break;
-        case 7:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, HIGH);
-            if(bl.available())
-            {
-                bl.println("Inspection");
-            }
-            break;
-        default:
-            contador = 1;
-            break;
-        }
-        CAN1.TXpacketBegin(0x501, 1);
-        CAN1.TXpacketLoad(contador);
-        CAN1.TXpackettransmit();
-    }*/
 }
 
 
@@ -205,7 +90,7 @@ void setup()
     attachInterrupt(BTN, mission_select, FALLING);
     pinMode(Accelaration, OUTPUT);
     pinMode(Skidpad, OUTPUT);
-    pinMode(Autocross, OUTPUT);
+    //pinMode(Autocross, OUTPUT);
     pinMode(Trackdrive, OUTPUT);
     pinMode(EBS_test, OUTPUT);
     pinMode(Inspection, OUTPUT);
@@ -217,7 +102,7 @@ void setup()
         Serial.println("Failed to create queue");
         while (1);
     }
-
+    colorWipe(strip.Color(0, 0, 0), 0);
     xTaskCreatePinnedToCore(
         Task1code,
         "Task1",
@@ -241,7 +126,7 @@ void setup()
 void loop()
 {
     leds();
-   
+    
    
     CAN_ID = CAN1.RXpacketBegin();
     int id = CAN_ID;
@@ -279,6 +164,10 @@ void loop()
         flag_heart = 0; 
     }
     id = 0x503;
+    /*if (xQueueSend(xQueue, &contador, portMAX_DELAY) != pdPASS) // test purpose only
+        {
+            Serial.println("Failed to send to the queue");
+        }*/
 }
 
 void colorWipe(uint32_t color, int wait)
@@ -295,12 +184,12 @@ void Task1code(void *pvParameters)
 {
 
 
-    if (task == true)
-    {
+
         int estado = 0;
-        int receivedValue;
+        int receivedValue = 0;
         while (1)
         {
+            //colorWipe(strip.Color(0, 0, 0), 0);
             //Serial.println("TASK");
 
             // Receiving data from the queue
@@ -350,11 +239,12 @@ void Task1code(void *pvParameters)
                     colorWipe(strip.Color(0, 0, 255), 0);
                     send = true;
                     break;
+                default:
+                    colorWipe(strip.Color(0, 0, 0), 0);
+                    Serial.println("Light to 0");
+                    break;
                 }
-            
-            
         }
-    }
 }
 
 
@@ -367,7 +257,7 @@ void leds()
             digitalWrite(Manual_driving, HIGH);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
@@ -380,7 +270,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, HIGH);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
@@ -393,7 +283,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, HIGH);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
@@ -406,7 +296,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, HIGH);
+            //digitalWrite(Autocross, HIGH);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
@@ -419,7 +309,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, HIGH);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, LOW);
@@ -432,7 +322,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, HIGH);
             digitalWrite(Inspection, LOW);
@@ -445,7 +335,7 @@ void leds()
             digitalWrite(Manual_driving, LOW);
             digitalWrite(Accelaration, LOW);
             digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
+            //digitalWrite(Autocross, LOW);
             digitalWrite(Trackdrive, LOW);
             digitalWrite(EBS_test, LOW);
             digitalWrite(Inspection, HIGH);
