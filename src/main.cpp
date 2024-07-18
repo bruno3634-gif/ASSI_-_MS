@@ -16,7 +16,7 @@ QueueHandle_t xQueue;
 
 #define Accelaration 4
 #define Skidpad 27
-#define Autocross 16
+#define Autocross 25
 #define Trackdrive 17
 #define EBS_test 15
 #define Inspection 33
@@ -26,8 +26,7 @@ volatile int contador = 1;
 BluetoothSerial bl;
 
 
-esp_bt_pin_type_t pin_type = ESP_BT_PIN_TYPE_FIXED;
-esp_bt_pin_code_t pin_code = { '1', '2', '3', '4' };
+
 
 hw_timer_t *timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -41,7 +40,7 @@ void colorWipe(uint32_t color, int wait);
 void Task1code(void *pvParameters);
 void leds();
 #define PIN 16
-#define NUM_LEDS 15
+#define NUM_LEDS 48
 volatile boolean send = true;
 
 volatile boolean task = true;
@@ -53,7 +52,7 @@ volatile unsigned long tim = 0;
 volatile unsigned long protect = 0;
 int flag = 0;
 volatile int flag_mission_select = 0;
-
+int emergencia = 0;
 volatile uint32_t CAN_ID = 0;
 
 uint8_t var = 0;
@@ -69,125 +68,14 @@ void IRAM_ATTR mission_select()
     }
     
     
-    //detachInterrupt(BTN);
-    /*if (digitalRead(BTN) == 0)
-    {
-        delay(50);
-        while (digitalRead(BTN) == 0)
-        {
-            delay(50);
-            Serial.print("!");
-        }
-        contador++;
-        Serial.println(contador);
-
-        switch (contador)
-        {
-        case 1:
-            digitalWrite(Manual_driving, HIGH);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Manual driving");
-            }
-            break;
-        case 2:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, HIGH);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Accelaration");
-            }
-            break;
-        case 3:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, HIGH);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Skidpad");
-            }
-            break;
-        case 4:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, HIGH);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Autocross");
-            }
-            break;
-        case 5:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, HIGH);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("Trackdrive");
-            }
-            break;
-        case 6:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, HIGH);
-            digitalWrite(Inspection, LOW);
-            if(bl.available())
-            {
-                bl.println("EBS Test");
-            }
-            break;
-        case 7:
-            digitalWrite(Manual_driving, LOW);
-            digitalWrite(Accelaration, LOW);
-            digitalWrite(Skidpad, LOW);
-            digitalWrite(Autocross, LOW);
-            digitalWrite(Trackdrive, LOW);
-            digitalWrite(EBS_test, LOW);
-            digitalWrite(Inspection, HIGH);
-            if(bl.available())
-            {
-                bl.println("Inspection");
-            }
-            break;
-        default:
-            contador = 1;
-            break;
-        }
-        CAN1.TXpacketBegin(0x501, 1);
-        CAN1.TXpacketLoad(contador);
-        CAN1.TXpackettransmit();
-    }*/
+    
 }
 
 
 void IRAM_ATTR onTimer()
 {
-    flag_heart = 1;   
+    flag_heart = 1;  
+    Serial.println("tmr"); 
 }
 
 
@@ -200,7 +88,7 @@ void setup()
     Serial.println("Here");
     strip.show();
     strip.clear();
-    colorWipe(strip.Color(0, 255, 0), 0);
+    //colorWipe(strip.Color(0, 255, 0), 0);
     pinMode(BTN, INPUT);
     attachInterrupt(BTN, mission_select, FALLING);
     pinMode(Accelaration, OUTPUT);
@@ -241,27 +129,27 @@ void setup()
 void loop()
 {
     leds();
-   
-   //colorWipe(strip.Color(0, 255, 0), 0);
+       
     CAN_ID = CAN1.RXpacketBegin();
     int id = CAN_ID;
-    
-    if (id == 0x502)
+
+    if(id == 0x502)
     {
         uint8_t CAN_DLC = CAN1.RXgetDLC();
         flag = CAN1.RXpacketRead(0);
-
+        Serial.println(flag);
         if (flag_core == 0)
         {
             task = true;
             flag_core = 1;
         }
-        if (send == true && flag == 4)
+        if (flag == 4)
         {
-            CAN1.TXpacketBegin(0x50, 0);
-            CAN1.TXpacketLoad(1);
-            CAN1.TXpackettransmit();
-            send = false;
+            emergencia = 1;
+        }
+        else
+        {
+            emergencia = 0;
         }
 
         // Send estado to the queue
@@ -269,17 +157,23 @@ void loop()
         {
             Serial.println("Failed to send to the queue");
         }
+
     }  
 
     if (flag_heart == 1)
     {
-        CAN1.TXpacketBegin(0x490, 0);
+        CAN1.TXpacketBegin(0x50, 0);
+        CAN1.TXpacketLoad(emergencia);
         CAN1.TXpacketLoad(contador);
         CAN1.TXpackettransmit();
         flag_heart = 0; 
+        Serial.println("transmitted");
     }
-    id = 0x503;
 }
+   
+
+    
+
 
 void colorWipe(uint32_t color, int wait)
 {
@@ -300,11 +194,7 @@ void Task1code(void *pvParameters)
         int estado = 0;
         int receivedValue;
         while (1)
-        {
-            //Serial.println("TASK");
-
-            // Receiving data from the queue
-            
+        {          
             if (xQueueReceive(xQueue, &receivedValue, 100 / portTICK_PERIOD_MS) == pdPASS)
             {
                  estado = receivedValue;
@@ -313,17 +203,23 @@ void Task1code(void *pvParameters)
                 {
                 case 1:
                     Serial.println("AS - OFF");
-                    colorWipe(strip.Color(0, 0, 0), 0);
+                    //colorWipe(strip.Color(0, 0, 0), 0);
+                    strip.fill(strip.Color(0, 0, 0), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     send = true;
                     break;
                 case 2:
                     Serial.println("AS - Ready");
-                    colorWipe(strip.Color(255, 255, 0), 0);
+                    //colorWipe(strip.Color(255, 255, 0), 0);
+                    strip.fill(strip.Color(255, 255, 0), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     send = true;
                     break;
                 case 3:
                     
-                    colorWipe(strip.Color(255, 255, 0), 0);
+                    //colorWipe(strip.Color(255, 255, 0), 0);
+                    strip.fill(strip.Color(255, 255, 0), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     tim = millis();
                     while (millis() < tim + 1000){
                         if (xQueueReceive(xQueue, &receivedValue, 100 / portTICK_PERIOD_MS) == pdPASS){
@@ -334,7 +230,9 @@ void Task1code(void *pvParameters)
                             break;
                         }
                     }
-                    colorWipe(strip.Color(0, 0, 0), 0);
+                    //colorWipe(strip.Color(0, 0, 0), 0);
+                    strip.fill(strip.Color(0, 0, 0), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     tim = millis();
                     while (millis() < tim + 1000){
                         if (xQueueReceive(xQueue, &receivedValue, 100 / portTICK_PERIOD_MS) == pdPASS)
@@ -352,7 +250,9 @@ void Task1code(void *pvParameters)
                     break;
                 case 4:
                     Serial.println("AS - Emergency");
-                    colorWipe(strip.Color(0, 0, 255), 0);
+                    //colorWipe(strip.Color(0, 0, 255), 0);
+                    strip.fill(strip.Color(0, 0, 255), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     tim = millis();
                     while (millis() < tim + 1000)
                     {
@@ -366,7 +266,9 @@ void Task1code(void *pvParameters)
                         }
                     }
                     
-                    colorWipe(strip.Color(0, 0, 0), 0);
+                    //colorWipe(strip.Color(0, 0, 0), 0);
+                    strip.fill(strip.Color(0, 0, 0), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     send = false;
                     tim = millis();
                     while (millis() < tim + 1000)
@@ -381,10 +283,16 @@ void Task1code(void *pvParameters)
                     break;
                 case 5:
                     Serial.println("AS - Finished");
-                    colorWipe(strip.Color(0, 0, 255), 0);
+                    //colorWipe(strip.Color(0, 0, 255), 0);
+                    strip.fill(strip.Color(0, 0, 255), 0, strip.numPixels());
+                    strip.show(); // Atualiza o strip com a nova cor
                     send = true;
                     break;
+                default:
+                    colorWipe(strip.Color(0, 0, 0), 0);
+                break;
                 }
+                
             
             
         }
@@ -492,9 +400,6 @@ void leds()
             contador = 1;
             break;
         }
-        Serial.println(contador);
-        CAN1.TXpacketBegin(0x501, 1);
-        CAN1.TXpacketLoad(contador);
-        CAN1.TXpackettransmit();
+
         flag_mission_select = 0;
 }
